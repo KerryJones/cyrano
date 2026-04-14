@@ -1,35 +1,64 @@
-"""Analysis pipeline — builds prompt and calls LLM."""
+"""Two-pass analysis pipeline.
+
+Pass 1 (Haiku — cheap): score relevance → Yes / Maybe / No + why.
+Pass 2 (Sonnet — quality): draft full reply, only for Yes/Maybe signals.
+
+This keeps costs low: only ~10-20% of signals reach the expensive drafting pass.
+"""
 
 import logging
 
 from cyrano.analyzers.base import Analysis
 from cyrano.analyzers.llm_client import chat_completion
+from cyrano.config import LLM_SCORING_MODEL, LLM_DRAFTING_MODEL
 from cyrano.personas.prompt_builder import build_personality_block, build_ai_prefs_block
 from cyrano.scanners.base import RawSignal
 
 logger = logging.getLogger(__name__)
 
 
-def analyze_signal(
-    signal: RawSignal,
-    personality: dict | None = None,
-    filters: dict | None = None,
-) -> Analysis:
-    """Analyze a signal using AI and return structured analysis."""
-    # Build comments text
-    comments_text = ""
+def _build_comments_text(signal: RawSignal) -> str:
     if signal.replies:
+        lines = []
         for i, c in enumerate(signal.replies[:10], 1):
-            comments_text += f"\n{i}. [score: {c.score}] u/{c.author}: {c.body}"
-    else:
-        comments_text = "\n(No comments yet)"
+            lines.append(f"{i}. [score: {c.score}] u/{c.author}: {c.body}")
+        return "\n" + "\n".join(lines)
+    return "\n(No comments yet)"
 
-    personality_block = build_personality_block(personality or {})
-    ai_prefs_block = build_ai_prefs_block(filters or {})
 
+def _score_signal(signal: RawSignal, filters: dict) -> dict | None:
+    """Pass 1: cheap relevance scoring with the scoring model (Haiku)."""
     subreddit = signal.metadata.get("subreddit", signal.platform)
+    comments_text = _build_comments_text(signal)
+    ai_prefs_block = build_ai_prefs_block(filters)
 
-    prompt = f"""You are analyzing a Reddit post for outreach potential.
+    prompt = f"""You are evaluating whether a Reddit post is worth engaging with.
+
+Subreddit: r/{subreddit}
+Post title: {signal.title}
+Post body: {signal.body or '(no body text)'}
+Score: {signal.score} | Comments: {signal.reply_count}
+
+Top comments:{comments_text}
+{ai_prefs_block}
+
+Is this post worth engaging with? Return JSON (no markdown) with:
+- "engage": "Yes", "Maybe", or "No"
+- "why": one sentence explaining the decision
+
+Be strict: "Yes" only for posts where a reply would be genuinely valuable and on-topic."""
+
+    return chat_completion(prompt, model=LLM_SCORING_MODEL)
+
+
+def _draft_reply(signal: RawSignal, personality: dict, filters: dict) -> dict | None:
+    """Pass 2: full reply drafting with the drafting model (Sonnet)."""
+    subreddit = signal.metadata.get("subreddit", signal.platform)
+    comments_text = _build_comments_text(signal)
+    personality_block = build_personality_block(personality)
+    ai_prefs_block = build_ai_prefs_block(filters)
+
+    prompt = f"""You are drafting a helpful Reddit reply.
 
 {personality_block}
 
@@ -41,23 +70,71 @@ Score: {signal.score} | Comments: {signal.reply_count}
 Top comments:{comments_text}
 {ai_prefs_block}
 
-Return a JSON object (no markdown fencing) with these exact keys:
-- "summary": 1-2 sentence summary of what the post is about
-- "coolest_comment": Copy the most interesting/insightful/funny comment verbatim. If no comments are interesting, write "no cool comments"
-- "suggested_reply": A suggested reply to that cool comment, written in the voice described above. If no cool comment, write "\u2014"
-- "suggested_post_comment": A useful comment you'd leave on this post, written in the voice described above. Be genuinely helpful and specific to this post.
-- "engage": "Yes", "No", or "Maybe". Be strict with "Yes" \u2014 only use it for exceptional posts that are a perfect engagement opportunity based on the criteria above. Most posts should be "Maybe" or "No".
-- "why": 1 sentence explaining the engagement recommendation"""
+Write a genuinely helpful reply. Only mention your product/project if it is directly relevant
+and would help the person — never force it. Match the community's tone.
 
-    result = chat_completion(prompt)
-    if result is None:
+Return JSON (no markdown) with:
+- "summary": 1-2 sentence summary of the post
+- "coolest_comment": the most interesting comment verbatim, or "no cool comments"
+- "suggested_reply": a reply to that cool comment in your voice; "\u2014" if no cool comment
+- "suggested_post_comment": a helpful comment on the post itself, in your voice
+- "why": one sentence on why this is worth engaging with"""
+
+    return chat_completion(prompt, model=LLM_DRAFTING_MODEL)
+
+
+def analyze_signal(
+    signal: RawSignal,
+    personality: dict | None = None,
+    filters: dict | None = None,
+) -> Analysis:
+    """Analyze a signal with two-pass LLM strategy.
+
+    Pass 1 (cheap): determine if worth engaging.
+    Pass 2 (quality): draft reply — only for Yes/Maybe signals.
+    """
+    personality = personality or {}
+    filters = filters or {}
+
+    # Pass 1: scoring
+    score_result = _score_signal(signal, filters)
+    if score_result is None:
         return Analysis.error_fallback()
 
+    engage = score_result.get("engage", "No")
+    why = score_result.get("why", "")
+
+    if engage == "No":
+        return Analysis(
+            summary="",
+            coolest_comment="no cool comments",
+            suggested_reply="\u2014",
+            suggested_post_comment="\u2014",
+            engage="No",
+            why=why,
+            model_used=LLM_SCORING_MODEL,
+        )
+
+    # Pass 2: drafting (only for Yes/Maybe)
+    draft_result = _draft_reply(signal, personality, filters)
+    if draft_result is None:
+        # Scoring passed but drafting failed — return minimal Yes/Maybe with why
+        return Analysis(
+            summary="",
+            coolest_comment="no cool comments",
+            suggested_reply="\u2014",
+            suggested_post_comment="\u2014",
+            engage=engage,
+            why=why,
+            model_used=LLM_SCORING_MODEL,
+        )
+
     return Analysis(
-        summary=result.get("summary", ""),
-        coolest_comment=result.get("coolest_comment", "no cool comments"),
-        suggested_reply=result.get("suggested_reply", "\u2014"),
-        suggested_post_comment=result.get("suggested_post_comment", "\u2014"),
-        engage=result.get("engage", "Maybe"),
-        why=result.get("why", ""),
+        summary=draft_result.get("summary", ""),
+        coolest_comment=draft_result.get("coolest_comment", "no cool comments"),
+        suggested_reply=draft_result.get("suggested_reply", "\u2014"),
+        suggested_post_comment=draft_result.get("suggested_post_comment", "\u2014"),
+        engage=engage,
+        why=draft_result.get("why", why),
+        model_used=f"{LLM_SCORING_MODEL}+{LLM_DRAFTING_MODEL}",
     )

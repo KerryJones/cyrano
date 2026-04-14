@@ -1,52 +1,62 @@
-"""LLM client wrapper — supports OpenAI directly, with LiteLLM as optional backend."""
+"""LLM client wrapper using LiteLLM for multi-provider support (Claude, OpenAI, etc.)."""
 
 import json
 import logging
 import time
 
-from openai import OpenAI
+from litellm import completion
 
-from cyrano.config import OPENAI_API_KEY, LLM_MODEL, LLM_TEMPERATURE, LLM_MAX_TOKENS
+from cyrano.config import ANTHROPIC_API_KEY, LLM_DRAFTING_MODEL, LLM_TEMPERATURE, LLM_MAX_TOKENS
 
 logger = logging.getLogger(__name__)
 
-_client: OpenAI | None = None
 
+def chat_completion(prompt: str, model: str | None = None, retries: int = 3) -> dict | None:
+    """Send a prompt to the LLM and return a parsed JSON dict.
 
-def get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=OPENAI_API_KEY)
-    return _client
+    Args:
+        prompt: The full prompt text.
+        model: Override the model (defaults to LLM_DRAFTING_MODEL).
+        retries: Number of retry attempts on failure.
 
-
-def chat_completion(prompt: str, retries: int = 3) -> dict | None:
-    """Send a prompt and parse JSON response, with retries."""
-    client = get_client()
+    Returns:
+        Parsed JSON dict, or None if all attempts fail.
+    """
+    model = model or LLM_DRAFTING_MODEL
 
     for attempt in range(retries):
         try:
-            response = client.chat.completions.create(
-                model=LLM_MODEL,
+            response = completion(
+                model=model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=LLM_MAX_TOKENS,
                 temperature=LLM_TEMPERATURE,
+                api_key=ANTHROPIC_API_KEY,
             )
             text = response.choices[0].message.content.strip()
 
             # Strip markdown code fences if present
             if text.startswith("```"):
-                text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-                if text.endswith("```"):
-                    text = text[:-3]
-                text = text.strip()
+                lines = text.split("\n")
+                # Drop first line (```json or ```) and last line (```)
+                inner = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
+                text = "\n".join(inner).strip()
 
             return json.loads(text)
-        except (json.JSONDecodeError, Exception) as e:
+
+        except json.JSONDecodeError as e:
             if attempt < retries - 1:
-                logger.warning("LLM parse error (%s), retrying...", e)
+                logger.warning("JSON parse error on attempt %d (%s), retrying...", attempt + 1, e)
                 time.sleep(2)
             else:
-                logger.error("LLM analysis failed: %s", e)
+                logger.error("LLM returned unparseable JSON after %d attempts", retries)
                 return None
+        except Exception as e:
+            if attempt < retries - 1:
+                logger.warning("LLM error on attempt %d (%s), retrying...", attempt + 1, e)
+                time.sleep(2)
+            else:
+                logger.error("LLM call failed after %d attempts: %s", retries, e)
+                return None
+
     return None
