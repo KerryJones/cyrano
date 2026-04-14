@@ -1,0 +1,51 @@
+keywords:
+  include: []
+  exclude:
+    - hiring
+    - job posting
+    - "[nsfw]"
+    - crypto airdrop
+    - onlyfans
+
+thresholds:
+  min_score: 2
+  min_comments: 0
+  max_comments: 300
+  max_age_hours: 24
+
+post_type:
+  allow: "all"
+
+flairs:
+  include: []
+  exclude:
+    - Meme
+    - Shitpost
+    - NSFW
+
+allowed_statuses:
+  - active
+
+ai_preferences:
+  prefer_topics:
+    - asking how to vet a real estate operator or lender
+    - sharing a bad experience with a syndication or private deal
+    - discussing due diligence for private real estate investments
+    - asking about investor protections or red flags
+    - fraud or mismanagement in real estate deals
+    - building a track record as an operator or lender
+    - asking how to check someone's deal history
+
+  avoid_topics:
+    - residential home buying for personal use
+    - stock market or crypto investing
+    - generic "how to get started in real estate" (too broad)
+    - political posts about housing policy
+    - already saturated threads with 50+ quality comments
+
+  engagement_notes: >
+    Focus on posts where someone is dealing with trust issues in
+    private real estate deals — fraud, vetting, due diligence,
+    track records. Lead with the personal experience and concrete
+    advice. Only mention DealCred if they're asking "is there a
+    way to check someone's track record?" or similar.

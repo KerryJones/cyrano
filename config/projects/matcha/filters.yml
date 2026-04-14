@@ -1,0 +1,49 @@
+keywords:
+  include: []
+  exclude:
+    - hiring
+    - job posting
+    - "[nsfw]"
+    - crypto
+    - onlyfans
+
+thresholds:
+  min_score: 2
+  min_comments: 0
+  max_comments: 200
+  max_age_hours: 24
+
+post_type:
+  allow: "all"
+
+flairs:
+  include: []
+  exclude:
+    - Meme
+    - Shitpost
+    - NSFW
+
+allowed_statuses:
+  - active
+
+ai_preferences:
+  prefer_topics:
+    - asking where to find good matcha
+    - matcha quality or preparation questions
+    - cafe recommendations for matcha
+    - frustration with bad or overpriced matcha
+    - comparing matcha grades or brands
+    - matcha latte vs traditional whisked
+
+  avoid_topics:
+    - selling matcha powder online
+    - generic cafe reviews with no matcha mention
+    - memes with no substance
+    - political posts
+    - already saturated threads (50+ quality comments)
+
+  engagement_notes: >
+    Focus on posts where someone genuinely needs help finding matcha
+    or understanding quality. Value-first: give the advice they need.
+    Only mention Matcha Match if they're explicitly looking for a
+    discovery tool or asking "is there an app for finding matcha?"

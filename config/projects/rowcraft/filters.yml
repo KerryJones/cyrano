@@ -1,0 +1,51 @@
+keywords:
+  include: []
+  exclude:
+    - hiring
+    - job posting
+    - "[nsfw]"
+    - crypto
+    - onlyfans
+    - selling
+
+thresholds:
+  min_score: 2
+  min_comments: 0
+  max_comments: 300
+  max_age_hours: 24
+
+post_type:
+  allow: "all"
+
+flairs:
+  include: []
+  exclude:
+    - Meme
+    - Shitpost
+    - NSFW
+
+allowed_statuses:
+  - active
+
+ai_preferences:
+  prefer_topics:
+    - asking for Concept2 workout recommendations or training plans
+    - looking for ERG apps or rowing training software
+    - discussing structured interval training on a rower
+    - comparing rowing apps (ErgZone, ErgData, etc.)
+    - asking about FTP testing or power-based rowing
+    - PM5 connectivity or BLE questions
+    - 2K test preparation or training plans
+
+  avoid_topics:
+    - on-water rowing technique (not our domain)
+    - buying/selling equipment
+    - memes and humor posts
+    - generic fitness questions with no rowing connection
+    - already saturated threads
+
+  engagement_notes: >
+    Focus on posts where someone needs specific training advice or is
+    looking for a rowing app. Give the training advice first — workout
+    recommendations, plan suggestions, pacing targets. Only mention
+    RowCraft if they're looking for an app specifically.
