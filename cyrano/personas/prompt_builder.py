@@ -39,6 +39,44 @@ def build_personality_block(personality: dict) -> str:
     return block
 
 
+def build_scoring_context(personality: dict) -> str:
+    """Build a compact identity block for the scoring pass (Haiku).
+
+    Includes who you are and what you care about, but not voice/tone/examples
+    (those are only needed for drafting).
+    """
+    if not personality:
+        return ""
+
+    name = personality.get("name", "")
+    bio = personality.get("bio", "").strip()
+    interests = ", ".join(personality.get("interests", []))
+    expertise = ", ".join(personality.get("expertise", []))
+    project = personality.get("project", {})
+
+    block = ""
+    if name:
+        block += f"You are evaluating posts on behalf of {name}."
+    if bio:
+        block += f"\nAbout: {bio}"
+    if interests:
+        block += f"\nInterests: {interests}"
+    if expertise:
+        block += f"\nExpertise: {expertise}"
+    if project:
+        proj_name = project.get("name", "")
+        proj_desc = project.get("description", "")
+        plug_when = project.get("plug_when", [])
+        if proj_name:
+            block += f"\nProject: {proj_name} — {proj_desc}"
+        if plug_when:
+            block += "\nThis project is relevant when:"
+            for pw in plug_when:
+                block += f"\n- {pw}"
+
+    return block
+
+
 def build_ai_prefs_block(filters: dict) -> str:
     """Build the AI engagement preferences section of the prompt."""
     if not filters:

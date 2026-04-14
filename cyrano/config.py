@@ -28,8 +28,8 @@ def _require_env(key: str) -> str:
 
 # Anthropic / LLM settings
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-LLM_SCORING_MODEL = os.environ.get("LLM_SCORING_MODEL", "claude-haiku-4-5-20250414")
-LLM_DRAFTING_MODEL = os.environ.get("LLM_DRAFTING_MODEL", "claude-sonnet-4-5-20250514")
+LLM_SCORING_MODEL = os.environ.get("LLM_SCORING_MODEL", "anthropic/claude-haiku-4-5")
+LLM_DRAFTING_MODEL = os.environ.get("LLM_DRAFTING_MODEL", "anthropic/claude-sonnet-4-6")
 LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.7"))
 LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "1024"))
 
@@ -66,7 +66,12 @@ def load_yaml(filename: str, directory: Path | None = None) -> dict | list:
 
 
 def list_projects() -> list[str]:
-    """Return project names found under config/projects/. Falls back to ['default']."""
+    """Return project names in scan order. Uses config/projects.yml if present."""
+    projects_file = CONFIG_DIR / "projects.yml"
+    if projects_file.exists():
+        ordered = load_yaml("projects.yml")
+        if isinstance(ordered, list) and ordered:
+            return ordered
     if not PROJECTS_DIR.exists():
         return ["default"]
     dirs = [d.name for d in PROJECTS_DIR.iterdir() if d.is_dir()]

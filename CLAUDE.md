@@ -26,11 +26,14 @@ Stack: Python 3.14, LiteLLM (Claude), python-telegram-bot v21, PRAW, APScheduler
 - MarkdownV2 in Telegram: always escape with `_esc()`, use `"\u2014"` for em-dash
 
 ### Research Before Guessing
-- Never fabricate or guess API behavior, Reddit rules, or Telegram bot API details. Use WebSearch/WebFetch.
+- Never fabricate or guess API behavior, model IDs, Reddit rules, or Telegram bot API details. Use WebSearch/WebFetch.
+- When you have the answer in front of you, read it carefully. Do not skim.
+- If corrected, do not defend the mistake with a confident-sounding justification. Verify first, then respond.
 
 ### Communication
 - No sycophancy. State what you think directly.
 - Push back when appropriate.
+- Never give overconfident answers when you're uncertain. Say you're not sure.
 
 ### Tool Usage
 - Prefer Claude Code tools (Read, Edit, Write, Glob, Grep) over Bash equivalents.

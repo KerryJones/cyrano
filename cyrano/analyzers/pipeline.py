@@ -11,7 +11,9 @@ import logging
 from cyrano.analyzers.base import Analysis
 from cyrano.analyzers.llm_client import chat_completion
 from cyrano.config import LLM_SCORING_MODEL, LLM_DRAFTING_MODEL
-from cyrano.personas.prompt_builder import build_personality_block, build_ai_prefs_block
+from cyrano.personas.prompt_builder import (
+    build_personality_block, build_ai_prefs_block, build_scoring_context,
+)
 from cyrano.scanners.base import RawSignal
 
 logger = logging.getLogger(__name__)
@@ -26,13 +28,17 @@ def _build_comments_text(signal: RawSignal) -> str:
     return "\n(No comments yet)"
 
 
-def _score_signal(signal: RawSignal, filters: dict) -> dict | None:
+def _score_signal(signal: RawSignal, personality: dict, filters: dict) -> dict | None:
     """Pass 1: cheap relevance scoring with the scoring model (Haiku)."""
     subreddit = signal.metadata.get("subreddit", signal.platform)
     comments_text = _build_comments_text(signal)
+    scoring_context = build_scoring_context(personality)
     ai_prefs_block = build_ai_prefs_block(filters)
 
-    prompt = f"""You are evaluating whether a Reddit post is worth engaging with.
+    prompt = f"""{scoring_context}
+
+You are evaluating whether this Reddit post is worth replying to, given the person's
+background, expertise, and interests described above.
 
 Subreddit: r/{subreddit}
 Post title: {signal.title}
@@ -42,11 +48,14 @@ Score: {signal.score} | Comments: {signal.reply_count}
 Top comments:{comments_text}
 {ai_prefs_block}
 
-Is this post worth engaging with? Return JSON (no markdown) with:
+Would this person have something genuinely valuable to contribute here?
+Return JSON (no markdown) with:
 - "engage": "Yes", "Maybe", or "No"
 - "why": one sentence explaining the decision
 
-Be strict: "Yes" only for posts where a reply would be genuinely valuable and on-topic."""
+Score "Yes" when the post is a clear fit for this person's expertise or interests.
+Score "Maybe" when they could add value but it's not a perfect match.
+Score "No" when the topic is outside their wheelhouse or the conversation is already saturated."""
 
     return chat_completion(prompt, model=LLM_SCORING_MODEL)
 
@@ -97,7 +106,7 @@ def analyze_signal(
     filters = filters or {}
 
     # Pass 1: scoring
-    score_result = _score_signal(signal, filters)
+    score_result = _score_signal(signal, personality, filters)
     if score_result is None:
         return Analysis.error_fallback()
 
