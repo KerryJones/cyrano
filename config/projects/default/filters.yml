@@ -1,0 +1,52 @@
+# ── Keyword Filters ──────────────────────────────────────────────
+keywords:
+  include: []   # Post MUST contain one of these (empty = no filter)
+  exclude:
+    - hiring
+    - job posting
+    - "[nsfw]"
+    - crypto airdrop
+    - onlyfans
+
+# ── Score & Engagement Thresholds ────────────────────────────────
+thresholds:
+  min_score: 2
+  min_comments: 0
+  max_comments: 300
+  max_age_hours: 24
+
+# ── Post Type ────────────────────────────────────────────────────
+post_type:
+  allow: "all"   # "all", "self_only", or "link_only"
+
+# ── Flair Filters ───────────────────────────────────────────────
+flairs:
+  include: []
+  exclude:
+    - Meme
+    - Shitpost
+    - NSFW
+
+# ── Status Filters ──────────────────────────────────────────────
+allowed_statuses:
+  - active
+
+# ── AI Engagement Preferences ───────────────────────────────────
+# Influences the Yes/Maybe/No scoring — not a hard filter.
+ai_preferences:
+  prefer_topics:
+    - posts asking for help, advice, or recommendations
+    - posts sharing a project or prototype they built
+    - posts where the author is stuck on a specific problem
+    - genuine discussions about tools, process, or tradeoffs
+
+  avoid_topics:
+    - pure meme or humor posts with no substance
+    - self-promotion spam
+    - posts with 50+ high-quality comments already (saturated)
+    - political or inflammatory content
+
+  engagement_notes: >
+    Prioritize posts where a thoughtful, specific reply would genuinely
+    help the person. Value-first always. Only mention the project if it
+    directly solves the problem they're describing.
