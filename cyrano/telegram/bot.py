@@ -14,6 +14,7 @@ Usage:
     await bot.stop()
 """
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -133,6 +134,8 @@ class CyranoBot:
         query = update.callback_query
         await query.answer()
 
+        if ":" not in query.data:
+            return
         action, signal_id = query.data.split(":", 1)
         scored = self._pending.get(signal_id)
 
@@ -233,13 +236,16 @@ class CyranoBot:
             telegram_message_id=scored.telegram_message_id,
         )
 
-        # Attempt to post to Reddit
+        # Attempt to post to Reddit (in executor to avoid blocking the event loop)
         poster = RedditPoster()
         comment_url = None
         error_msg = None
 
         try:
-            comment_url = poster.post_comment(scored.signal.url, reply_text)
+            loop = asyncio.get_running_loop()
+            comment_url = await loop.run_in_executor(
+                None, poster.post_comment, scored.signal.url, reply_text
+            )
             scored.comment_url = comment_url
             scored.approval_status = "posted"
             save_approval(
@@ -273,6 +279,7 @@ class CyranoBot:
                     chat_id=self.chat_id,
                     message_id=scored.telegram_message_id,
                     text=status_text,
+                    parse_mode=None,
                 )
             except Exception as e:
                 logger.warning("Could not update Telegram message: %s", e)

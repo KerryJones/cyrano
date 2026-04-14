@@ -14,6 +14,7 @@ def deduplicate_signals(signals: list[RawSignal], lookback_days: int = 3) -> lis
     if not seen_ids:
         return signals
 
+    # ID format must match pipeline.py: f"reddit_{platform_id}"
     deduped = [s for s in signals if f"{s.platform}_{s.platform_id}" not in seen_ids]
     removed = len(signals) - len(deduped)
     if removed:

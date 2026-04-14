@@ -8,14 +8,13 @@ version = "0.1.0"
 description = "Value-first Reddit reply assistant with Telegram approval flow"
 readme = "README.md"
 license = {text = "AGPL-3.0"}
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 keywords = ["reddit", "ai", "community", "outreach", "telegram"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU Affero General Public License v3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
 ]
 
 dependencies = [
@@ -26,8 +25,6 @@ dependencies = [
     "apscheduler>=3.10.0",
     "python-telegram-bot>=21.0",
     "praw>=7.7.0",
-    "fastapi>=0.110.0",
-    "uvicorn[standard]>=0.29.0",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +33,10 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "httpx>=0.27.0",
     "ruff>=0.4.0",
+]
+web = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
 ]
 
 [project.scripts]
@@ -46,4 +47,4 @@ include = ["cyrano*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py314"

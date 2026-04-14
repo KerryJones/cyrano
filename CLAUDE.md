@@ -1,14 +1,14 @@
 # Cyrano
 
-Value-first Reddit reply assistant. Scans communities for relevant conversations, drafts helpful replies via AI (two-pass: Haiku scoring → Sonnet drafting), sends candidates to Telegram for human approval, posts via PRAW.
+Value-first Reddit reply assistant. Scans communities for relevant conversations, drafts helpful replies via AI (two-pass: Haiku scoring, Sonnet drafting), sends candidates to Telegram for human approval, posts via PRAW.
 
-Stack: Python 3.11+, LiteLLM (Claude), python-telegram-bot v21, PRAW, APScheduler, Docker → Dokploy (Digital Ocean).
+Stack: Python 3.14, LiteLLM (Claude), python-telegram-bot v21, PRAW, APScheduler, Docker, Dokploy (Digital Ocean).
 
 ## Rules
 
 ### Ownership & Quality
-- You own this codebase. A failing test is always your bug — never dismiss as pre-existing.
-- Write tests alongside features — happy path, error paths, edge cases that catch regressions.
+- You own this codebase. A failing test is always your bug.
+- Write tests alongside features — happy path, error paths, edge cases.
 - Run `ruff check cyrano/` and `pytest` before presenting work as done.
 - Resolve TODOs in files you touch if they're in scope.
 
@@ -19,10 +19,11 @@ Stack: Python 3.11+, LiteLLM (Claude), python-telegram-bot v21, PRAW, APSchedule
 3. Prefer the simplest solution that works
 
 ### Code Style
-- Python 3.11+, type hints everywhere, dataclasses for models
+- Python 3.14, type hints everywhere, dataclasses for models
 - `async` where Telegram/APScheduler requires it, sync elsewhere
 - Logging via stdlib `logging`, never `print()`
 - No backward-compat shims — this has never shipped
+- MarkdownV2 in Telegram: always escape with `_esc()`, use `"\u2014"` for em-dash
 
 ### Research Before Guessing
 - Never fabricate or guess API behavior, Reddit rules, or Telegram bot API details. Use WebSearch/WebFetch.
@@ -35,6 +36,7 @@ Stack: Python 3.11+, LiteLLM (Claude), python-telegram-bot v21, PRAW, APSchedule
 - Prefer Claude Code tools (Read, Edit, Write, Glob, Grep) over Bash equivalents.
 - No compound Bash commands (pipes, `cd &&`, chained commands).
 - No git commits without explicit user permission.
+- Allowlisted Bash: `make`, `git`, `ruff`, `pytest`.
 
 ### Memory Discipline
 - Do not save architecture, file paths, or code patterns to MEMORY.md.
@@ -44,20 +46,15 @@ Stack: Python 3.11+, LiteLLM (Claude), python-telegram-bot v21, PRAW, APSchedule
 
 ## Commands
 
-```bash
-pip install -e ".[dev]"
-ruff check cyrano/
-pytest
-
-python -m cyrano scan              # one-shot scan → Telegram candidates
-python -m cyrano run               # scheduler + Telegram bot (production)
-python -m cyrano bot               # Telegram bot only (test approval flow)
-docker compose up --build          # full container
+```
+make setup    # create venv + install deps
+make scan     # one-shot scan
+make run      # scheduler + Telegram bot (production)
+make bot      # Telegram bot only (test approval flow)
 ```
 
 ## Reference Docs
 
 | File | Contents |
 |------|----------|
-| `docs/architecture.md` | Pipeline, data flow, module map |
-| `docs/config.md` | YAML config fields (personality, subreddits, filters) |
+| `docs/architecture.md` | Pipeline, data flow, module map, deployment |

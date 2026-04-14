@@ -1,14 +1,14 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
-# Install dependencies first (layer cache)
+# Copy source + config
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
-
-# Copy source
 COPY cyrano/ cyrano/
 COPY config/ config/
+
+# Install (non-editable for Docker)
+RUN pip install --no-cache-dir .
 
 # Data dir is mounted as a volume at runtime
 RUN mkdir -p data

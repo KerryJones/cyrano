@@ -28,8 +28,8 @@ def _require_env(key: str) -> str:
 
 # Anthropic / LLM settings
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-LLM_SCORING_MODEL = os.environ.get("LLM_SCORING_MODEL", "claude-haiku-4-20250414")
-LLM_DRAFTING_MODEL = os.environ.get("LLM_DRAFTING_MODEL", "claude-sonnet-4-20250514")
+LLM_SCORING_MODEL = os.environ.get("LLM_SCORING_MODEL", "claude-haiku-4-5-20250414")
+LLM_DRAFTING_MODEL = os.environ.get("LLM_DRAFTING_MODEL", "claude-sonnet-4-5-20250514")
 LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.7"))
 LLM_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "1024"))
 

@@ -49,7 +49,7 @@ class CyranoScheduler:
 
         for project in projects:
             try:
-                scored_signals = await asyncio.get_event_loop().run_in_executor(
+                scored_signals = await asyncio.get_running_loop().run_in_executor(
                     None, run_scan, project
                 )
                 actionable = [s for s in scored_signals if s.is_actionable]

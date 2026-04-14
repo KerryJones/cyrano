@@ -24,7 +24,7 @@ def format_candidate(scored: ScoredSignal) -> tuple[str, InlineKeyboardMarkup]:
         f"*\\[{_esc(scored.project)}\\] r/{_esc(subreddit)}* {engage_icon}",
         f"📝 {_esc(s.title)}",
         f"Score: {s.score} \\| Comments: {s.reply_count} \\| Age: {age_hrs}h",
-        f"🔗 {s.url}",
+        f"🔗 {_esc(s.url)}",
         "",
         f"*Summary:* {_esc(a.summary)}",
         f"*Why:* {_esc(a.why)}",
@@ -37,7 +37,7 @@ def format_candidate(scored: ScoredSignal) -> tuple[str, InlineKeyboardMarkup]:
         ]
 
     reply_text = scored.reply_text
-    if reply_text and reply_text != "—":
+    if reply_text and reply_text != "\u2014":
         lines += [
             "",
             "─────────────────",

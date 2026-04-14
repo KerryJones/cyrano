@@ -1,9 +1,0 @@
-# Pinned versions for reproducible installs.
-# Canonical deps are in pyproject.toml — this file is for Docker layer caching.
-python-dotenv==1.2.2
-litellm>=1.40.0
-requests>=2.31.0
-pyyaml>=6.0
-apscheduler>=3.10.0
-python-telegram-bot>=21.0
-praw>=7.7.0

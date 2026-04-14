@@ -68,21 +68,13 @@ async def _run_async():
     ensure_data_dirs()
 
     bot = CyranoBot()
-    app = await bot.build()
+    await bot.build()
 
     scheduler = CyranoScheduler(bot)
 
-    async def on_startup(app):
-        scheduler.start()
-
-    async def on_shutdown(app):
-        scheduler.shutdown()
-
-    app.post_init = on_startup
-    app.post_shutdown = on_shutdown
-
     logger.info("Starting Cyrano — scheduler + Telegram bot")
     await bot.start()
+    scheduler.start()
 
     # Block until SIGINT/SIGTERM
     stop_event = asyncio.Event()
@@ -92,6 +84,7 @@ async def _run_async():
 
     await stop_event.wait()
     logger.info("Shutdown signal received")
+    scheduler.shutdown()
     await bot.stop()
 
 

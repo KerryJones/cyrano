@@ -11,6 +11,7 @@ import time
 
 from cyrano.analyzers.pipeline import analyze_signal
 from cyrano.config import get_max_post_age_hours, load_project_config
+from cyrano.filters.dedup import deduplicate_signals
 from cyrano.filters.rule_filter import apply_pre_filters
 from cyrano.models import ScoredSignal
 from cyrano.scanners.reddit import RedditScanner
@@ -51,6 +52,7 @@ def run_scan(project: str) -> list[ScoredSignal]:
             signals = _scanner.scan([subreddit], max_age_hours=max_age)
             raw_count = len(signals)
             signals = apply_pre_filters(signals, filters)
+            signals = deduplicate_signals(signals)
 
             if not signals:
                 logger.info("  No posts (fetched %d, all pre-filtered)", raw_count)
