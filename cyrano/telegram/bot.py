@@ -22,6 +22,7 @@ from telegram import Update
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
+    CommandHandler,
     ContextTypes,
     ConversationHandler,
     MessageHandler,
@@ -80,6 +81,7 @@ class CyranoBot:
 
         app.add_handler(edit_conv)
         app.add_handler(CallbackQueryHandler(self._handle_callback))
+        app.add_handler(CommandHandler("scan", self._handle_scan))
 
         self._app = app
         return app
@@ -100,6 +102,31 @@ class CyranoBot:
             await self._app.stop()
             await self._app.shutdown()
             logger.info("Cyrano bot stopped")
+
+    # ------------------------------------------------------------------
+    # Commands
+    # ------------------------------------------------------------------
+
+    async def _handle_scan(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /scan command — trigger a scan and send results."""
+        if not update.message or str(update.message.chat_id) != self.chat_id:
+            return
+
+        from cyrano.config import list_projects
+        from cyrano.pipeline import run_scan
+
+        await update.message.reply_text("Scanning...")
+
+        loop = asyncio.get_running_loop()
+        total = 0
+        for project in list_projects():
+            scored_signals = await loop.run_in_executor(None, run_scan, project)
+            actionable = [s for s in scored_signals if s.is_actionable]
+            total += len(actionable)
+            for scored in actionable:
+                await self.send_candidate(scored)
+
+        await update.message.reply_text(f"Done — {total} actionable signal(s)")
 
     # ------------------------------------------------------------------
     # Sending candidates
