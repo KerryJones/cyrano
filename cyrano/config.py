@@ -49,6 +49,10 @@ REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET", "")
 REDDIT_USERNAME = os.environ.get("REDDIT_USERNAME", "")
 REDDIT_PASSWORD = os.environ.get("REDDIT_PASSWORD", "")
 
+# Turso (libSQL)
+TURSO_URL = os.environ.get("TURSO_URL", "")
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
+
 # Scheduler
 SCAN_CRON = os.environ.get("SCAN_CRON", "*/30 8-20 * * *")
 TIMEZONE = os.environ.get("TIMEZONE", "America/New_York")
@@ -118,7 +122,5 @@ def get_max_post_age_hours(filters: dict) -> int:
 
 
 def ensure_data_dirs():
-    """Create data directories if they don't exist."""
-    for subdir in ["signals", "analyses", "campaigns", "feedback", "scan_history",
-                   "approvals", "post_history"]:
-        (DATA_DIR / subdir).mkdir(parents=True, exist_ok=True)
+    """Legacy — no longer needed with Turso backend. Kept for compatibility."""
+    pass

@@ -1,80 +1,54 @@
-"""Signal storage — save and load signals as daily JSON files."""
+"""Signal storage — Turso HTTP backend."""
 
 import datetime
 import json
 import logging
-from pathlib import Path
 
-from cyrano.config import DATA_DIR
+from cyrano.storage.db import execute
 
 logger = logging.getLogger(__name__)
 
-SIGNALS_DIR = DATA_DIR / "signals"
 
+def save_signals(signals: list[dict], date_str: str | None = None) -> None:
+    """Upsert signals into the database."""
+    if not signals:
+        return
 
-def _ensure_dir():
-    SIGNALS_DIR.mkdir(parents=True, exist_ok=True)
+    date_str = date_str or datetime.date.today().isoformat()
 
+    for s in signals:
+        execute(
+            """INSERT OR IGNORE INTO signals
+               (id, project, platform, platform_id, url, title, body, author,
+                subreddit, score, reply_count, created_utc, status, analysis, scanned_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                s["id"], s.get("project", ""), s["platform"], s["platform_id"],
+                s["url"], s["title"], s.get("body", ""), s.get("author", ""),
+                s.get("subreddit", ""), s.get("score", 0), s.get("reply_count", 0),
+                s.get("created_utc", 0), s.get("status", ""),
+                json.dumps(s.get("analysis", {})), date_str,
+            ],
+        )
 
-def save_signals(signals: list[dict], date_str: str | None = None) -> Path:
-    """Save signals to a daily JSON file. Merges with existing data."""
-    _ensure_dir()
-    if date_str is None:
-        date_str = datetime.date.today().isoformat()
-
-    filepath = SIGNALS_DIR / f"{date_str}.json"
-
-    existing = []
-    if filepath.exists():
-        with open(filepath) as f:
-            existing = json.load(f)
-
-    # Merge: add new signals, skip duplicates by id
-    existing_ids = {s.get("id") for s in existing}
-    for signal in signals:
-        if signal.get("id") not in existing_ids:
-            existing.append(signal)
-
-    with open(filepath, "w") as f:
-        json.dump(existing, f, indent=2, default=str)
-
-    logger.info("Saved %d signals to %s", len(existing), filepath.name)
-    return filepath
+    logger.info("Saved %d signals to Turso", len(signals))
 
 
 def load_signals(date_str: str | None = None) -> list[dict]:
-    """Load signals from a daily JSON file."""
-    if date_str is None:
-        date_str = datetime.date.today().isoformat()
+    """Load signals for a given date."""
+    date_str = date_str or datetime.date.today().isoformat()
 
-    filepath = SIGNALS_DIR / f"{date_str}.json"
-    if not filepath.exists():
-        return []
+    rows = execute("SELECT * FROM signals WHERE scanned_at = ?", [date_str])
 
-    with open(filepath) as f:
-        return json.load(f)
+    for row in rows:
+        if isinstance(row.get("analysis"), str):
+            row["analysis"] = json.loads(row["analysis"])
+    return rows
 
 
 def load_recent_signal_ids(lookback_days: int = 3) -> set[str]:
     """Load signal IDs from recent days for deduplication."""
-    _ensure_dir()
-    ids = set()
-    today = datetime.date.today()
+    cutoff = (datetime.date.today() - datetime.timedelta(days=lookback_days)).isoformat()
 
-    for i in range(lookback_days):
-        date_str = (today - datetime.timedelta(days=i)).isoformat()
-        filepath = SIGNALS_DIR / f"{date_str}.json"
-        if filepath.exists():
-            with open(filepath) as f:
-                signals = json.load(f)
-            for s in signals:
-                ids.add(s.get("id", ""))
-
-    return ids
-
-
-def list_signal_dates() -> list[str]:
-    """List all dates that have signal files, most recent first."""
-    _ensure_dir()
-    files = sorted(SIGNALS_DIR.glob("*.json"), reverse=True)
-    return [f.stem for f in files]
+    rows = execute("SELECT id FROM signals WHERE scanned_at >= ?", [cutoff])
+    return {row["id"] for row in rows}

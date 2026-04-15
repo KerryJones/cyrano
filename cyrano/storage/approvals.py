@@ -1,30 +1,10 @@
-"""Approval decision persistence — daily JSON files matching signals.py pattern."""
+"""Approval decision persistence — Turso HTTP backend."""
 
-import datetime
-import json
 import logging
-from pathlib import Path
 
-from cyrano.config import DATA_DIR
+from cyrano.storage.db import execute
 
 logger = logging.getLogger(__name__)
-
-APPROVALS_DIR = DATA_DIR / "approvals"
-
-
-def _ensure_dir():
-    APPROVALS_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _today_file() -> Path:
-    return APPROVALS_DIR / f"{datetime.date.today().isoformat()}.json"
-
-
-def _load_file(filepath: Path) -> list[dict]:
-    if not filepath.exists():
-        return []
-    with open(filepath) as f:
-        return json.load(f)
 
 
 def save_approval(
@@ -34,46 +14,40 @@ def save_approval(
     edited_text: str | None = None,
     telegram_message_id: int | None = None,
 ) -> None:
-    """Persist an approval decision (approved/edited/skipped/posted)."""
-    _ensure_dir()
-    filepath = _today_file()
-    records = _load_file(filepath)
+    """Persist an approval decision. Updates if signal_id already exists."""
+    existing = execute("SELECT id FROM approvals WHERE signal_id = ?", [signal_id])
 
-    # Update existing record if present, otherwise append
-    for record in records:
-        if record.get("signal_id") == signal_id:
-            record.update({
-                "decision": decision,
-                "edited_text": edited_text,
-                "telegram_message_id": telegram_message_id,
-                "updated_at": datetime.datetime.utcnow().isoformat(),
-            })
-            break
+    if existing:
+        execute(
+            """UPDATE approvals
+               SET decision = ?, edited_text = ?, telegram_message_id = ?,
+                   updated_at = datetime('now')
+               WHERE signal_id = ?""",
+            [decision, edited_text, telegram_message_id, signal_id],
+        )
     else:
-        records.append({
-            "signal_id": signal_id,
-            "project": project,
-            "decision": decision,
-            "edited_text": edited_text,
-            "telegram_message_id": telegram_message_id,
-            "created_at": datetime.datetime.utcnow().isoformat(),
-            "updated_at": datetime.datetime.utcnow().isoformat(),
-        })
-
-    with open(filepath, "w") as f:
-        json.dump(records, f, indent=2, default=str)
+        execute(
+            """INSERT INTO approvals (signal_id, project, decision, edited_text, telegram_message_id)
+               VALUES (?, ?, ?, ?, ?)""",
+            [signal_id, project, decision, edited_text, telegram_message_id],
+        )
 
 
 def get_approval(signal_id: str) -> dict | None:
-    """Look up today's approval record for a signal."""
-    for record in _load_file(_today_file()):
-        if record.get("signal_id") == signal_id:
-            return record
-    return None
+    """Look up the approval record for a signal."""
+    rows = execute(
+        "SELECT signal_id, project, decision, edited_text, telegram_message_id, created_at, updated_at FROM approvals WHERE signal_id = ?",
+        [signal_id],
+    )
+    return rows[0] if rows else None
 
 
 def load_approvals(date_str: str | None = None) -> list[dict]:
     """Load all approval records for a given date (defaults to today)."""
-    if date_str is None:
-        date_str = datetime.date.today().isoformat()
-    return _load_file(APPROVALS_DIR / f"{date_str}.json")
+    import datetime
+    date_str = date_str or datetime.date.today().isoformat()
+
+    return execute(
+        "SELECT signal_id, project, decision, edited_text, telegram_message_id, created_at, updated_at FROM approvals WHERE date(created_at) = ?",
+        [date_str],
+    )
