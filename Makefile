@@ -2,14 +2,17 @@ VENV = .venv
 PY = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
 
-.PHONY: setup scan run bot clean
+.PHONY: setup scan send run bot clean
 
 setup: ## Create venv and install dependencies
 	python3 -m venv $(VENV)
 	$(PIP) install -e ".[dev]"
 
-scan: ## One-shot scan across all projects
+scan: ## One-shot scan across all projects + send to Telegram
 	$(PY) -m cyrano scan
+
+send: ## Re-send today's actionable signals to Telegram
+	$(PY) -m cyrano send
 
 run: ## Start scheduler + Telegram bot (production)
 	$(PY) -m cyrano run

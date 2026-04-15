@@ -135,7 +135,64 @@ def cmd_bot(args):
     asyncio.run(_bot_only_async())
 
 
+def cmd_send(args):
+    """Re-send today's (or a specific date's) actionable signals to Telegram."""
+    from cyrano.storage.signals import load_signals
+    from cyrano.analyzers.base import Analysis
+    from cyrano.scanners.base import RawSignal
+    from cyrano.models import ScoredSignal
+
+    date_str = args.date or datetime.date.today().isoformat()
+    signals = load_signals(date_str)
+
+    if not signals:
+        logger.info("No signals found for %s", date_str)
+        return
+
+    actionable = []
+    for s in signals:
+        a = s.get("analysis", {})
+        if a.get("engage") not in ("Yes", "Maybe"):
+            continue
+
+        sig = RawSignal(
+            platform=s["platform"],
+            platform_id=s["platform_id"],
+            url=s["url"],
+            title=s["title"],
+            body=s.get("body", ""),
+            author=s.get("author", ""),
+            score=s.get("score", 0),
+            reply_count=s.get("reply_count", 0),
+            created_utc=s.get("created_utc", 0),
+            metadata={"subreddit": s.get("subreddit", "")},
+        )
+        analysis = Analysis(
+            summary=a.get("summary", ""),
+            coolest_comment=a.get("coolest_comment", ""),
+            suggested_reply=a.get("suggested_reply", ""),
+            suggested_post_comment=a.get("suggested_comment", ""),
+            engage=a["engage"],
+            why=a.get("why", ""),
+            model_used=a.get("model_used", ""),
+        )
+        scored = ScoredSignal(
+            signal=sig, analysis=analysis,
+            project=s.get("project", ""), signal_id=s["id"],
+        )
+        actionable.append(scored)
+
+    if not actionable:
+        logger.info("No actionable signals for %s", date_str)
+        return
+
+    logger.info("Sending %d actionable signals from %s to Telegram", len(actionable), date_str)
+    asyncio.run(_send_candidates(actionable))
+
+
 def main():
+    import datetime
+
     parser = argparse.ArgumentParser(
         prog="cyrano",
         description="Cyrano — value-first Reddit reply assistant with Telegram approval",
@@ -147,6 +204,10 @@ def main():
     scan_parser.add_argument("--project", type=str, default=None,
                              help="Scan a specific project only (default: all)")
 
+    send_parser = subparsers.add_parser("send", help="Re-send actionable signals to Telegram")
+    send_parser.add_argument("--date", type=str, default=None,
+                             help="Date to send (YYYY-MM-DD, default: today)")
+
     subparsers.add_parser("run", help="Start scheduler + Telegram bot (production)")
     subparsers.add_parser("bot", help="Start Telegram bot only (test approval flow)")
 
@@ -155,6 +216,8 @@ def main():
 
     if args.command == "scan":
         cmd_scan(args)
+    elif args.command == "send":
+        cmd_send(args)
     elif args.command == "run":
         cmd_run(args)
     elif args.command == "bot":
