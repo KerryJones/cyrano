@@ -86,7 +86,7 @@ and would help the person — never force it. Match the community's tone.
 Return JSON (no markdown) with:
 - "summary": 1-2 sentence summary of the post
 - "coolest_comment": the most interesting comment verbatim, or "no cool comments"
-- "suggested_reply": a reply to that cool comment in your voice; "\u2014" if no cool comment
+- "suggested_reply": a reply to that cool comment in your voice; "" if no cool comment
 - "suggested_post_comment": a helpful comment on the post itself, in your voice
 - "why": one sentence on why this is worth engaging with"""
 
@@ -118,8 +118,8 @@ def analyze_signal(
         return Analysis(
             summary="",
             coolest_comment="no cool comments",
-            suggested_reply="\u2014",
-            suggested_post_comment="\u2014",
+            suggested_reply="",
+            suggested_post_comment="",
             engage="No",
             why=why,
             model_used=LLM_SCORING_MODEL,
@@ -132,8 +132,8 @@ def analyze_signal(
         return Analysis(
             summary="",
             coolest_comment="no cool comments",
-            suggested_reply="\u2014",
-            suggested_post_comment="\u2014",
+            suggested_reply="",
+            suggested_post_comment="",
             engage=engage,
             why=why,
             model_used=LLM_SCORING_MODEL,
@@ -142,8 +142,8 @@ def analyze_signal(
     return Analysis(
         summary=draft_result.get("summary", ""),
         coolest_comment=draft_result.get("coolest_comment", "no cool comments"),
-        suggested_reply=draft_result.get("suggested_reply", "\u2014"),
-        suggested_post_comment=draft_result.get("suggested_post_comment", "\u2014"),
+        suggested_reply=draft_result.get("suggested_reply", ""),
+        suggested_post_comment=draft_result.get("suggested_post_comment", ""),
         engage=engage,
         why=draft_result.get("why", why),
         model_used=f"{LLM_SCORING_MODEL}+{LLM_DRAFTING_MODEL}",

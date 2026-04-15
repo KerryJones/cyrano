@@ -3,6 +3,7 @@
 import time
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.helpers import escape_markdown
 
 from cyrano.models import ScoredSignal
 
@@ -23,7 +24,7 @@ def format_candidate(scored: ScoredSignal) -> tuple[str, InlineKeyboardMarkup]:
     lines = [
         f"*\\[{_esc(scored.project)}\\] r/{_esc(subreddit)}* {engage_icon}",
         f"📝 {_esc(s.title)}",
-        f"Score: {s.score} \\| Comments: {s.reply_count} \\| Age: {age_hrs}h",
+        f"Score: {_esc(str(s.score))} \\| Comments: {_esc(str(s.reply_count))} \\| Age: {_esc(str(age_hrs))}h",
         f"🔗 {_esc(s.url)}",
         "",
         f"*Summary:* {_esc(a.summary)}",
@@ -37,7 +38,7 @@ def format_candidate(scored: ScoredSignal) -> tuple[str, InlineKeyboardMarkup]:
         ]
 
     reply_text = scored.reply_text
-    if reply_text and reply_text != "\u2014":
+    if reply_text:
         lines += [
             "",
             "─────────────────",
@@ -82,5 +83,4 @@ def _esc(text: str) -> str:
     """Escape special characters for Telegram MarkdownV2."""
     if not text:
         return ""
-    special = r"\_*[]()~`>#+-=|{}.!"
-    return "".join(f"\\{c}" if c in special else c for c in str(text))
+    return escape_markdown(str(text), version=2)

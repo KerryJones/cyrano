@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import asyncio
+import datetime
 import logging
 import signal
 import sys
@@ -191,8 +192,6 @@ def cmd_send(args):
 
 
 def main():
-    import datetime
-
     parser = argparse.ArgumentParser(
         prog="cyrano",
         description="Cyrano — value-first Reddit reply assistant with Telegram approval",
