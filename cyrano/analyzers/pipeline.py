@@ -48,14 +48,15 @@ Score: {signal.score} | Comments: {signal.reply_count}
 Top comments:{comments_text}
 {ai_prefs_block}
 
-Would this person have something genuinely valuable to contribute here?
+Could this person add something useful to this conversation?
 Return JSON (no markdown) with:
 - "engage": "Yes", "Maybe", or "No"
 - "why": one sentence explaining the decision
 
-Score "Yes" when the post is a clear fit for this person's expertise or interests.
-Score "Maybe" when they could add value but it's not a perfect match.
-Score "No" when the topic is outside their wheelhouse or the conversation is already saturated."""
+Score "Yes" when the post touches their interests or expertise — even loosely.
+Score "Maybe" when they could share a relevant experience or opinion.
+Score "No" only when the topic is clearly unrelated or the thread is pure memes/spam.
+Err on the side of "Maybe" — the human will make the final call."""
 
     return chat_completion(prompt, model=LLM_SCORING_MODEL)
 

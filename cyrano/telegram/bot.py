@@ -222,8 +222,8 @@ class CyranoBot:
         await self._post_reply(scored, action="noplug")
 
     async def _post_reply(self, scored: "ScoredSignal", action: str):
-        """Hand off to the Reddit poster and update the Telegram message."""
-        from cyrano.reddit.poster import RedditPoster
+        """Post reply to Reddit, or send copy-paste text if Reddit creds aren't configured."""
+        from cyrano.config import REDDIT_CLIENT_ID
 
         scored.approval_status = action
         reply_text = scored.reply_text
@@ -235,6 +235,30 @@ class CyranoBot:
             edited_text=scored.edited_text,
             telegram_message_id=scored.telegram_message_id,
         )
+
+        if not REDDIT_CLIENT_ID:
+            # No Reddit creds — send reply text for manual paste
+            status = format_status_update(scored, action)
+            if scored.telegram_message_id and self._app:
+                try:
+                    await self._app.bot.edit_message_text(
+                        chat_id=self.chat_id,
+                        message_id=scored.telegram_message_id,
+                        text=status,
+                        parse_mode=None,
+                    )
+                    await self._app.bot.send_message(
+                        chat_id=self.chat_id,
+                        text=f"{reply_text}\n\n{scored.signal.url}",
+                        disable_web_page_preview=True,
+                    )
+                except Exception as e:
+                    logger.warning("Could not send copy-paste message: %s", e)
+            self._pending.pop(scored.signal_id, None)
+            logger.info("Approved (manual paste): %s", scored.signal_id)
+            return
+
+        from cyrano.reddit.poster import RedditPoster
 
         # Attempt to post to Reddit (in executor to avoid blocking the event loop)
         poster = RedditPoster()

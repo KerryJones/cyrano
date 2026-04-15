@@ -26,7 +26,7 @@ def setup_logging(verbose: bool = False):
 
 
 def cmd_scan(args):
-    """Run a one-shot scan and log actionable signals."""
+    """Run a one-shot scan and send actionable signals to Telegram."""
     from cyrano.config import ensure_data_dirs, list_projects
     from cyrano.pipeline import run_scan
 
@@ -39,11 +39,11 @@ def cmd_scan(args):
             sys.exit(1)
         projects = [args.project]
 
-    total_actionable = 0
+    all_actionable = []
     for project in projects:
         scored = run_scan(project)
         actionable = [s for s in scored if s.is_actionable]
-        total_actionable += len(actionable)
+        all_actionable.extend(actionable)
         for s in actionable:
             logger.info(
                 "  [%s] r/%s — %s",
@@ -53,10 +53,27 @@ def cmd_scan(args):
             )
 
     logger.info(
-        "Scan complete — %d actionable across %d project(s) "
-        "(Telegram delivery active in `run` mode)",
-        total_actionable, len(projects),
+        "Scan complete — %d actionable across %d project(s)",
+        len(all_actionable), len(projects),
     )
+
+    if all_actionable:
+        asyncio.run(_send_candidates(all_actionable))
+
+
+async def _send_candidates(actionable):
+    """Send actionable signals to Telegram for review."""
+    from cyrano.telegram.bot import CyranoBot
+
+    bot = CyranoBot()
+    await bot.build()
+    await bot.start()
+
+    for scored in actionable:
+        await bot.send_candidate(scored)
+        logger.info("Sent to Telegram: %s", scored.signal_id)
+
+    await bot.stop()
 
 
 async def _run_async():
